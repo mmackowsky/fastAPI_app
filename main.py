@@ -1,23 +1,39 @@
-from enum import Enum
+from typing import Annotated
 
-from fastapi import FastAPI
-
+from fastapi import FastAPI, File, UploadFile
+from fastapi.responses import HTMLResponse
 
 app = FastAPI()
 
 
-class ModelName(str, Enum):
-    alexnet = "alexnet"
-    resnet = "resnet"
-    lenet = "lenet"
+@app.post("/files/")
+async def create_files(
+    files: Annotated[list[bytes], File(description="Multiple files as bytes")],
+):
+    return {"file_sizes": [len(file) for file in files]}
 
 
-@app.get('/models/{model_name}')
-async def get_model(model_name: ModelName):
-    if model_name is ModelName.alexnet:
-        return {"model_name": model_name, "message": "Deep Learning FTW"}
+@app.post("/uploadfiles/")
+async def create_upload_files(
+    files: Annotated[
+        list[UploadFile], File(description="Multiple files as UploadFile")
+    ],
+):
+    return {"filenames": [file.filename for file in files]}
 
-    if model_name.value == "lenet":
-        return {"model_name": model_name, "message": "LeCNN all the images"}
 
-    return {"model_name": model_name, "message": "Have some residuals"}
+@app.get("/")
+async def main():
+    content = """
+<body>
+<form action="/files/" enctype="multipart/form-data" method="post">
+<input name="files" type="file" multiple>
+<input type="submit">
+</form>
+<form action="/uploadfiles/" enctype="multipart/form-data" method="post">
+<input name="files" type="file" multiple>
+<input type="submit">
+</form>
+</body>
+    """
+    return HTMLResponse(content=content)
